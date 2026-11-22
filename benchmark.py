@@ -1,141 +1,219 @@
+from collections import defaultdict
+from contextlib import redirect_stdout
 from pathlib import Path
+import io
 import re
-import csv
-import subprocess
 import sys
 
-# Absolute Pitch AI benchmark for instrument 000.
+
+# ==========================================
+# Absolute Pitch AI - Multi-Instrument Benchmark
+# ==========================================
+
+PROJECT_DIR = Path(__file__).resolve().parent
 WAV_DIR = Path(r"E:\rise-\temp\midi音\wav")
-INSTRUMENT_ID = "000"
-OUTPUT_CSV = Path("results_000.csv")
-MAIN_SCRIPT = Path(__file__).with_name("main.py")
+OUTPUT_TXT = PROJECT_DIR / "benchmark_results.txt"
+MAIN_SCRIPT = PROJECT_DIR / "main.py"
 
 FILENAME_PATTERN = re.compile(
     r"^(\d+)\s*-\s*(\d+)\s*-\s*(.+)\.wav$",
     re.IGNORECASE,
 )
-RESULT_PATTERN = re.compile(r"^\s*Result:\s*(\S+)\s*$", re.MULTILINE)
+RESULT_PATTERN = re.compile(
+    r"^\s*Result:\s*(\S+)\s*$",
+    re.MULTILINE,
+)
+
+
+class Tee:
+    """Write the same text to multiple streams and flush immediately."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, text):
+        for stream in self.streams:
+            stream.write(text)
+            stream.flush()
+        return len(text)
+
+    def flush(self):
+        for stream in self.streams:
+            stream.flush()
 
 
 def collect_targets():
-    targets = []
+    """Collect WAV files and group them by instrument number."""
+    instruments = defaultdict(list)
 
-    for wav_path in sorted(WAV_DIR.glob("*.wav")):
+    for wav_path in WAV_DIR.glob("*.wav"):
         match = FILENAME_PATTERN.match(wav_path.name)
         if not match:
             continue
 
         instrument_id, notes_number, expected_note = match.groups()
-        if instrument_id != INSTRUMENT_ID:
-            continue
-
-        targets.append(
+        instruments[instrument_id].append(
             (wav_path, int(notes_number), expected_note.strip())
         )
 
-    return targets
+    for files in instruments.values():
+        files.sort(key=lambda item: (item[1], item[0].name.lower()))
 
-
-def predict(wav_path):
-    process = subprocess.run(
-        [sys.executable, str(MAIN_SCRIPT), str(wav_path)],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
+    return dict(
+        sorted(
+            instruments.items(),
+            key=lambda item: (int(item[0]), item[0]),
+        )
     )
 
-    output = process.stdout + "\n" + process.stderr
-    match = RESULT_PATTERN.search(output)
 
-    if process.returncode != 0:
-        error = output.strip().splitlines()
-        return "ERROR", error[-1] if error else f"Exit code {process.returncode}"
+def run_benchmark(pitch_ai, model, instruments):
+    total_files = sum(len(files) for files in instruments.values())
+    total_correct = 0
+    total_tested = 0
 
-    if not match:
-        return "NO_RESULT", "Could not find 'Result:' in program output"
+    print("=" * 72)
+    print(" Absolute Pitch AI - Multi-Instrument Benchmark")
+    print("=" * 72)
+    print(f"WAV directory: {WAV_DIR}")
+    print(f"Instruments:   {len(instruments)}")
+    print(f"Test files:    {total_files}")
+    print("Output:        ./benchmark_results.txt")
+    print("=" * 72)
 
-    return match.group(1), ""
+    for instrument_id, files in instruments.items():
+        instrument_correct = 0
+        instrument_tested = 0
+
+        print()
+        print("-" * 72)
+        print(f"[Instrument {instrument_id}]")
+        print(f"Files: {len(files)}")
+        print("-" * 72)
+
+        for index, (wav_path, notes_number, expected_note) in enumerate(
+            files, start=1
+        ):
+            print()
+            print(f"[{index}/{len(files)}] {wav_path.name}", flush=True)
+
+            captured_output = io.StringIO()
+            predicted_note = "ERROR"
+
+            try:
+                # main.py's own detailed output is mirrored to the console,
+                # the TXT log, and this temporary buffer for result parsing.
+                with redirect_stdout(Tee(sys.stdout, captured_output)):
+                    pitch_ai.predict(str(wav_path), model)
+
+                match = RESULT_PATTERN.search(captured_output.getvalue())
+                if match:
+                    predicted_note = match.group(1)
+                else:
+                    predicted_note = "NO_RESULT"
+                    print("  [ERROR] Could not find 'Result:' in prediction output.")
+
+            except Exception as error:
+                print(f"  [ERROR] {type(error).__name__}: {error}")
+
+            correct = predicted_note == expected_note
+            status = "OK" if correct else "NG"
+
+            print(
+                f"  Expected: {expected_note} | "
+                f"Predicted: {predicted_note} | {status}"
+            )
+
+            instrument_tested += 1
+            total_tested += 1
+
+            if correct:
+                instrument_correct += 1
+                total_correct += 1
+
+        accuracy = (
+            instrument_correct / instrument_tested * 100
+            if instrument_tested
+            else 0.0
+        )
+
+        print()
+        print(f"[Instrument {instrument_id} Summary]")
+        print(f"  Total:      {instrument_tested}")
+        print(f"  Correct:    {instrument_correct}")
+        print(f"  Incorrect:  {instrument_tested - instrument_correct}")
+        print(f"  Accuracy:   {accuracy:.2f}%")
+
+    overall_accuracy = (
+        total_correct / total_tested * 100 if total_tested else 0.0
+    )
+
+    print()
+    print("=" * 72)
+    print(" BENCHMARK COMPLETE")
+    print("=" * 72)
+    print(f"Instruments: {len(instruments)}")
+    print(f"Total:       {total_tested}")
+    print(f"Correct:     {total_correct}")
+    print(f"Incorrect:   {total_tested - total_correct}")
+    print(f"Accuracy:    {overall_accuracy:.2f}%")
+    print(f"TXT:         {OUTPUT_TXT}")
+    print("=" * 72)
 
 
 def main():
-    if not MAIN_SCRIPT.is_file():
-        print(f"[ERROR] main.py not found: {MAIN_SCRIPT}")
-        raise SystemExit(1)
+    # "w" starts a fresh log for each benchmark run.
+    # Tee mirrors every print to the console and the TXT file.
+    with OUTPUT_TXT.open("w", encoding="utf-8", buffering=1) as log_file:
+        output_stream = Tee(sys.stdout, log_file)
 
-    if not WAV_DIR.is_dir():
-        print(f"[ERROR] WAV directory not found: {WAV_DIR}")
-        raise SystemExit(1)
+        with redirect_stdout(output_stream):
+            try:
+                print("[Benchmark] Starting...")
+                print(f"[Benchmark] Log file: {OUTPUT_TXT}")
+                print()
 
-    targets = collect_targets()
+                if not MAIN_SCRIPT.is_file():
+                    print(f"[ERROR] main.py not found: {MAIN_SCRIPT}")
+                    return
 
-    print("=" * 60)
-    print(" Absolute Pitch AI - Benchmark")
-    print("=" * 60)
-    print(f"Instrument: {INSTRUMENT_ID}")
-    print(f"Directory:  {WAV_DIR}")
-    print(f"Test files: {len(targets)}")
-    print("=" * 60)
+                if not WAV_DIR.is_dir():
+                    print(f"[ERROR] WAV directory not found: {WAV_DIR}")
+                    return
 
-    if not targets:
-        print("[ERROR] No matching WAV files were found.")
-        print("Expected filename format: 000 - 001 - C#-1.wav")
-        raise SystemExit(1)
+                instruments = collect_targets()
 
-    results = []
+                if not instruments:
+                    print("[ERROR] No matching WAV files were found.")
+                    print(
+                        "Expected filename format: "
+                        "(instrument) - (notes number) - (note).wav"
+                    )
+                    return
 
-    for index, (wav_path, notes_number, expected_note) in enumerate(targets, 1):
-        print(f"[{index}/{len(targets)}] {wav_path.name}", flush=True)
+                # Import and load the AI once, then reuse the same model
+                # for every WAV file. This avoids a Python/model startup
+                # for each individual audio file.
+                project_path = str(PROJECT_DIR)
+                if project_path not in sys.path:
+                    sys.path.insert(0, project_path)
 
-        predicted_note, error = predict(wav_path)
-        correct = predicted_note == expected_note
+                import main as pitch_ai
 
-        status = "OK" if correct else "NG"
-        print(
-            f"  Expected: {expected_note} | "
-            f"Predicted: {predicted_note} | {status}"
-        )
+                # main.py normally uses a path relative to the current
+                # working directory. Anchor it to the project directory.
+                pitch_ai.MODEL_PATH = PROJECT_DIR / "models" / "pitch_ai.pkl"
 
-        results.append(
-            {
-                "instrument": INSTRUMENT_ID,
-                "notes_number": notes_number,
-                "file": wav_path.name,
-                "expected": expected_note,
-                "predicted": predicted_note,
-                "correct": correct,
-                "error": error,
-            }
-        )
+                print("[Benchmark] Loading AI model once...")
+                model = pitch_ai.load_model()
+                print("[Benchmark] Model ready. Starting tests...")
 
-    total = len(results)
-    correct_count = sum(row["correct"] for row in results)
-    accuracy = correct_count / total * 100 if total else 0.0
+                run_benchmark(pitch_ai, model, instruments)
 
-    with OUTPUT_CSV.open("w", newline="", encoding="utf-8-sig") as csv_file:
-        fieldnames = [
-            "instrument",
-            "notes_number",
-            "file",
-            "expected",
-            "predicted",
-            "correct",
-            "error",
-        ]
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(results)
-
-    print("\n" + "=" * 60)
-    print(" BENCHMARK COMPLETE")
-    print("=" * 60)
-    print(f"Instrument: {INSTRUMENT_ID}")
-    print(f"Total:      {total}")
-    print(f"Correct:    {correct_count}")
-    print(f"Incorrect:  {total - correct_count}")
-    print(f"Accuracy:   {accuracy:.2f}%")
-    print(f"CSV:        {OUTPUT_CSV.resolve()}")
+            except KeyboardInterrupt:
+                print()
+                print("[CANCELLED] Benchmark interrupted by user.")
+                print("[CANCELLED] Results up to this point are saved in the TXT file.")
 
 
 if __name__ == "__main__":
