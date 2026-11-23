@@ -20,8 +20,9 @@ VERSION = "0.2.0"
 
 MODEL_PATH = Path("models/pitch_ai.pkl")
 
-SAMPLE_RATE = 22050
-FFT_SIZE = 32768
+# 44.1 kHz supports the full MIDI 0-127 range, including G9.
+SAMPLE_RATE = 44100
+FFT_SIZE = 65536
 
 # CPU負荷を抑える設定
 TRAIN_VARIANTS = 6
