@@ -19,7 +19,7 @@ import numpy as np
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_WAV_DIR = Path(r"E:\rise-\temp\midi音\wav")
 RUNS_DIR = PROJECT_DIR / "bench_runs"
-NOTE_PC = {"C": 0, "C#": 1, "D": 2, "D#": 3, "E": 4, "F": 5, "F#": 6, "G": 7, "G#": 8, "A": 9, "A#": 10}
+NOTE_PC = {"C": 0, "C#": 1, "D": 2, "D#": 3, "E": 4, "F": 5, "F#": 6, "G": 7, "G#": 8, "A": 9, "A#": 10, "B": 11}
 NOTE_RE = re.compile(r"^(C#|D#|F#|G#|A#|C|D|E|F|G|A|B)(-?\d+)$")
 
 
