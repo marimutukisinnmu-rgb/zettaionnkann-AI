@@ -932,3 +932,16 @@ Important limitations:
 - The reused model was trained with v0.4.0 DSP behavior. The 23 feature dimensions/order are unchanged, but the YIN abstention change can shift feature distributions.
 - No local audio benchmark or runtime execution was possible during repository authoring. Treat v0.4.1 as experimental until the full benchmark is run.
 - Preserve v0.4.0 files and all prior benchmark outputs.
+
+# 14. Instrument 127: drums and sound effects (2026-11-27)
+
+Instrument 127 in the current MIDI-rendered benchmark dataset is the drums / sound-effects instrument entry, not a normal pitched melodic instrument.
+
+Known interpretation:
+- Conventional single-note pitch estimation is not expected to work reliably for this instrument because its sounds are drum/percussion or sound-effect material.
+- The v0.4.0 benchmark result for Instrument 127 was: 127 files, OK 0, NG 0, LOW_CONF 127, SKIP 0, ERROR 0.
+- The benchmark summary reported 2 correct best-candidate guesses and an accuracy of 1.57% for this instrument, despite all 127 results being classified LOW_CONF.
+- This behavior was already known/expected and should not be treated as a newly discovered regression or as a priority pitch-accuracy failure.
+- LOW_CONF means the system abstained from a confident pitch decision; it does not necessarily mean the best candidate was incorrect.
+
+Do not add a special-case pitch mapping for Instrument 127 solely to improve benchmark accuracy. Keep its drum/effect nature in mind when interpreting instrument-level results.
