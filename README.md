@@ -179,13 +179,15 @@ Changes:
   high-band-YIN evidence to the candidate feature vector (23 -> 28 features).
 - Trains an independent ExtraTrees model at
   models/pitch_reranker_v042.pkl. Existing v0.4.0/v0.4.1 model files are not
-  overwritten.
+  overwritten. Use python main_v042.py --retrain to rebuild only the v0.4.2
+  model.
 - Fixes the benchmark scope to GM Bank 0 programs 0-119 and records excluded
   program counts in summary.json. Note labels still cover MIDI 0-127.
 
 Run:
 ```powershell
 python main_v042.py "test.wav"
+python main_v042.py --retrain
 python benchmark_v042.py
 ```
 
