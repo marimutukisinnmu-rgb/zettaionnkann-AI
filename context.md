@@ -933,15 +933,47 @@ Important limitations:
 - No local audio benchmark or runtime execution was possible during repository authoring. Treat v0.4.1 as experimental until the full benchmark is run.
 - Preserve v0.4.0 files and all prior benchmark outputs.
 
-# 14. Instrument 127: drums and sound effects (2026-11-27)
+# 14. GM sound effects and percussion are separate (corrected 2026-11-27)
 
-Instrument 127 in the current MIDI-rendered benchmark dataset is the drums / sound-effects instrument entry, not a normal pitched melodic instrument.
+The earlier note that described Instrument/Program 127 as drums was incorrect.
 
-Known interpretation:
-- Conventional single-note pitch estimation is not expected to work reliably for this instrument because its sounds are drum/percussion or sound-effect material.
-- The v0.4.0 benchmark result for Instrument 127 was: 127 files, OK 0, NG 0, LOW_CONF 127, SKIP 0, ERROR 0.
-- The benchmark summary reported 2 correct best-candidate guesses and an accuracy of 1.57% for this instrument, despite all 127 results being classified LOW_CONF.
-- This behavior was already known/expected and should not be treated as a newly discovered regression or as a priority pitch-accuracy failure.
+According to the GM mapping supplied by the user:
+- Bank 0 programs 0-119 are ordinary pitched instruments.
+- Bank 0 programs 120-127 are the eight sound-effect presets:
+  - 120 Guitar Fret Noise
+  - 121 Breath Noise
+  - 122 Seashore
+  - 123 Bird Tweet
+  - 124 Telephone Ring
+  - 125 Helicopter
+  - 126 Applause
+  - 127 Gunshot
+- GM percussion is not selected by Bank 0 program 127. It uses the percussion bank (Bank 128 in the user's SoundFont setup), Preset 0 for Standard Kit, and MIDI channel 9 in zero-based channel notation (channel 10 in one-based notation).
+- The user's listed Standard Kit note range is 35-81. Exclusive classes noted: 42/44/46 (hi-hats), 71/72 (whistles), 73/74 (guiro), 78/79 (cuica), 80/81 (triangle).
+
+Interpretation of the earlier benchmark:
+- The 127-file result for numbered entry 127 was LOW_CONF 127, SKIP 0, ERROR 0, with 2 correct best-candidate guesses (1.57%).
+- If the dataset's leading instrument number is the GM Bank 0 program number, entry 127 is Gunshot, not a drum kit. Treat it as a sound-effect row, not as ordinary pitched-instrument accuracy.
 - LOW_CONF means the system abstained from a confident pitch decision; it does not necessarily mean the best candidate was incorrect.
 
-Do not add a special-case pitch mapping for Instrument 127 solely to improve benchmark accuracy. Keep its drum/effect nature in mind when interpreting instrument-level results.
+Do not add a special-case pitch mapping for Program 127 to improve ordinary-instrument pitch accuracy. v0.4.2 excludes Bank 0 programs 120-127 from its main ordinary-instrument benchmark. Percussion classification is deferred.
+
+# 15. v0.4.2 high-register improvement (2026-11-27)
+
+Scope:
+- Main evaluation: GM Bank 0 programs 0-119 only.
+- Sound effects: Bank 0 programs 120-127 are deferred.
+- Percussion: Bank 128 / Standard Kit is deferred.
+- Pitch labels remain MIDI 0-127; excluding GM programs 120-127 does not mean high MIDI note numbers are unsupported.
+
+Implementation:
+- Extend high-register periodicity support with a separate YIN pass for MIDI 96-127 when high-frequency spectral energy is present.
+- Improve spectral candidate extraction with log-parabolic sub-bin interpolation and a reserved candidate quota for high notes.
+- Extend candidate features from 23 to 28 using cents-tolerant fundamental, upper-harmonic, subharmonic, and high-band-YIN evidence.
+- Train a separate ExtraTrees reranker at models/pitch_reranker_v042.pkl.
+- Benchmark only GM Bank 0 programs 0-119 and record excluded program counts.
+
+Historical benchmark clarification:
+- The run whose folder/log text contained v0.4.0_20261127_211627 and v0.4.0 strings was identified by the user as the v0.4.1 run. Treat its result as v0.4.1 for comparisons, while noting that the raw folder/log label remains v0.4.0.
+
+Do not claim the new version improves accuracy until its local smoke tests and full same-subset benchmark have completed.
