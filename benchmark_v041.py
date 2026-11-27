@@ -88,10 +88,10 @@ def collect_targets(wav_dir):
 def make_run_dir(base):
     base.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = base / f"v0.4.1.1_{stamp}"
+    path = base / f"v0.4.1_{stamp}"
     suffix = 1
     while path.exists():
-        path = base / f"v0.4.1.1_{stamp}_{suffix:02d}"
+        path = base / f"v0.4.1_{stamp}_{suffix:02d}"
         suffix += 1
     path.mkdir()
     return path
@@ -392,10 +392,10 @@ def main():
 def make_run_dir(base):
     base.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    folder = base / f"v0.4.1.1_{stamp}"
+    folder = base / f"v0.4.1_{stamp}"
     suffix = 1
     while folder.exists():
-        folder = base / f"v0.4.1.1_{stamp}_{suffix:02d}"
+        folder = base / f"v0.4.1_{stamp}_{suffix:02d}"
         suffix += 1
     folder.mkdir()
     return folder
