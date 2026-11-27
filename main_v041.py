@@ -38,15 +38,7 @@ def main():
         description="Absolute Pitch AI v0.4.1 - Adaptive DSP + ExtraTrees reranker (no deep learning)"
     )
     parser.add_argument("audio", nargs="?", help="Audio file to analyze")
-    parser.add_argument(
-        "--retrain",
-        action="store_true",
-        help="Rebuild the v0.4.1 candidate reranker",
-    )
     args = parser.parse_args()
-
-    if args.retrain and MODEL_PATH.exists():
-        MODEL_PATH.unlink()
 
     model = load_model()
     if args.audio:
@@ -59,8 +51,6 @@ def main():
     print(f"Version: {VERSION}")
     print("Usage:")
     print('python main.py "test.wav"')
-    print("Rebuild model:")
-    print("python main.py --retrain")
     return 0
 
 
