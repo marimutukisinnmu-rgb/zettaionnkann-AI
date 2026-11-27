@@ -2,7 +2,7 @@ import argparse
 import sys
 
 import pitch_dsp_v041 as pitch_dsp
-import pitch_model_v040 as pitch_model  # v0.4.1.1 reuses the compatible 23-feature v0.4.1.0 model
+import pitch_model_v040 as pitch_model  # v0.4.1 reuses the compatible 23-feature v0.4.0 model
 import pitch_runtime_v041 as pitch_runtime
 
 VERSION = pitch_dsp.VERSION
