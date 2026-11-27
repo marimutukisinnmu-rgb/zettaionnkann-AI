@@ -161,3 +161,38 @@ This is an experimental branch of the pipeline. Compare its coverage and
 accuracy against the preserved v0.4.0 benchmark before treating it as an
 improvement. The spectral peak supplement can include harmonics, so the
 reranker still has to distinguish fundamentals from partials.
+
+
+## v0.4.2 high-register DSP update (experimental)
+
+v0.4.2 focuses on ordinary pitched GM Bank 0 programs 0-119. GM Bank 0
+programs 120-127 are sound effects and are excluded from this version's
+benchmark. Percussion Bank 128 is deferred.
+
+Changes:
+- Adds a separate high-register YIN pass for MIDI 96-127, triggered only
+  when the corresponding high-frequency spectrum contains sufficient energy.
+- Reserves part of the supplemental spectral-peak candidate budget for
+  MIDI 96-127 so low-frequency peaks cannot consume every slot.
+- Uses log-parabolic sub-bin peak interpolation.
+- Adds cents-tolerant fundamental, upper-harmonic, subharmonic, and
+  high-band-YIN evidence to the candidate feature vector (23 -> 28 features).
+- Trains an independent ExtraTrees model at
+  models/pitch_reranker_v042.pkl. Existing v0.4.0/v0.4.1 model files are not
+  overwritten.
+- Fixes the benchmark scope to GM Bank 0 programs 0-119 and records excluded
+  program counts in summary.json. Note labels still cover MIDI 0-127.
+
+Run:
+```powershell
+python main_v042.py "test.wav"
+python benchmark_v042.py
+```
+
+The benchmark uses the same WAV naming convention but excludes program
+numbers 120-127 (sound effects). Run the 0-119 subset on the same files and
+compare it with the corresponding subset of prior versions; do not compare
+the filtered total directly with the full 128-program v0.4.1 total.
+
+This implementation is experimental until local compilation, a small
+smoke test, model training, and the full benchmark complete successfully.
