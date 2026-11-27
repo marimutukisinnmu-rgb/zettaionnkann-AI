@@ -791,4 +791,6 @@ Most recent work:
 7. Correct fix identified: add "B": 11.
 8. The fix has not yet been committed to GitHub.
 
-**Immediate next action:** Update benchmark.py in the GitHub main branch, then have the user pull the fix and rerun the benchmark. Before writing, fetch the latest file SHA again to avoid overwriting intervening changes.
+**Latest update (2026-11-27):** `benchmark.py` was updated on `main` to add `"B": 11` to `NOTE_PC`, fixing the `KeyError: 'B'`. Commit: `4514d3477aa32dd534c611482ea4bab78d382fc9`. The updated file was fetched again and verified to contain the mapping. The user still needs to pull the commit locally and rerun the benchmark.
+
+**Immediate next action:** User runs `git pull` in the project directory, then reruns `python benchmark.py`. Review the new output for any further issues.
