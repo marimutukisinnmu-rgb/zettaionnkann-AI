@@ -794,3 +794,115 @@ Most recent work:
 **Latest update (2026-11-27):** `benchmark.py` was updated on `main` to add `"B": 11` to `NOTE_PC`, fixing the `KeyError: 'B'`. Commit: `4514d3477aa32dd534c611482ea4bab78d382fc9`. The updated file was fetched again and verified to contain the mapping. The user still needs to pull the commit locally and rerun the benchmark.
 
 **Immediate next action:** User runs `git pull` in the project directory, then reruns `python benchmark.py`. Review the new output for any further issues.
+
+
+# 12. v0.4.0 Full Benchmark Result (2026-11-27)
+
+A full benchmark was completed locally and the uploaded result files were inspected.
+
+Run:
+`bench_runs/v0.4.0_20261127_194143`
+
+Input:
+`E:\\rise-\\temp\\midi音\\wav`
+
+Environment:
+- Python 3.14.6
+- Windows 10 build 19045
+- Intel64 Family 6 Model 94 Stepping 3
+- 8 logical CPUs
+- NumPy 2.5.0
+- librosa 1.0.0
+- scikit-learn 1.9.1
+- joblib 1.6.0
+- soundfile 0.14.0
+
+## 12.1 Overall result
+
+- Instruments: 128
+- Total files: 16,256
+- Valid (non-SKIP) files: 14,255
+- Correct guesses: 10,800
+- OK: 9,229
+- LOW_CONF: 3,099
+- NG: 1,927
+- SKIP: 2,001
+- ERROR: 0
+- Accuracy (all): 66.4370%
+- Accuracy (valid): 75.7629%
+- Coverage: 87.6907%
+- Wall time: 1,037.72 seconds
+- CPU time: 847.25 seconds
+
+Among LOW_CONF results, 1,571 were correct and 1,528 were incorrect. LOW_CONF therefore has a 50.69% best-candidate accuracy in this benchmark; it is not a calibrated probability.
+
+Timing summary from the benchmark:
+- total: mean 65.04 ms, median 73.13 ms, p95 116.71 ms
+- load: mean 11.48 ms, median 6.93 ms, p95 31.53 ms
+- tier0: mean 11.19 ms, median 10.50 ms, p95 16.82 ms
+- tier1: mean 37.48 ms, median 51.38 ms, p95 68.80 ms
+- tier2: mean 3.98 ms, median 0.00 ms, p95 20.01 ms
+
+## 12.2 Comparison with v0.3 report
+
+The previously recorded v0.3 report:
+- 9,278 correct / 16,256 total
+- 57.07% accuracy across all files
+- 65.09% accuracy on 14,255 valid files
+
+v0.4.0:
+- 10,800 correct / 16,256 total
+- 66.44% accuracy across all files
+- 75.76% accuracy on 14,255 valid files
+
+Reported change:
+- +1,522 correct guesses
+- +9.37 percentage points all-file accuracy
+- +10.67 percentage points valid-file accuracy
+
+This comparison uses the previously reported v0.3 figures and the newly uploaded v0.4.0 benchmark. It does not independently re-run v0.3.
+
+## 12.3 Accuracy by MIDI range
+
+| Range | Files | Valid | Correct | Valid accuracy | Coverage |
+|---|---:|---:|---:|---:|---:|
+| MIDI 1–23 | 2,944 | 2,944 | 2,163 | 73.47% | 100.00% |
+| MIDI 24–95 | 9,216 | 9,022 | 7,127 | 78.996% | 97.895% |
+| MIDI 96–127 | 4,096 | 2,289 | 1,510 | 65.97% | 55.88% |
+
+High notes MIDI 96–127 are the largest coverage weakness: 1,807 SKIP files and 1,883 LOW_CONF results. Only 90 results in this range were classified OK; many correct best candidates remain LOW_CONF.
+
+## 12.4 Instrument-level observations
+
+Selected strong results:
+- Instrument 032: 127/127 correct (100%)
+- Instruments 073, 078, 091, 085, 075: each 127/127 correct (100%)
+- Instrument 002, 004, 005, 015, 021, 023, 030: each 108/108 valid files correct (100%)
+
+Selected weak/systematic results:
+- Instrument 031: 0/127 correct; 85 non-SKIP errors were octave_up_2, and 42 were SKIP.
+- Instrument 014: 5/108 correct; 66 octave_up_1 errors, 12 octave_up_2 errors, 25 other errors.
+- Instrument 016: 4/127 correct; 104 octave_down_2 and 12 octave_down_1 errors.
+- Instrument 018: 3/108 correct; 97 octave_down_1 errors.
+- Instrument 121: 0/127 correct; 107 errors classified as other.
+- Instrument 113: 0/108 correct; 69 errors classified as other and 32 octave_up_1.
+- Instrument 124: 0/127 correct; 101 errors classified as other.
+
+These are observed benchmark patterns only. Do not assume octave/label mismatch or a particular instrument cause without inspecting source WAVs and expected labels.
+
+Across all incorrect valid predictions, the most common error classes were:
+- other: 1,829
+- octave_down_1: 300
+- semitone_up: 272
+- octave_up_1: 229
+- octave_down_2: 152
+- semitone_down: 124
+- octave_up_2: 114
+
+## 12.5 Recommended next investigation
+
+1. Prioritize MIDI 96–127 coverage and LOW_CONF handling.
+2. Inspect instrument-specific failures, especially 014, 016, 018, 031, 113, 121, and 124.
+3. Determine whether failures are caused by expected-label/rendering mismatches, instrument spectra, candidate generation, or reranker behavior. Verify using actual WAVs before changing labels or adding special cases.
+4. Inspect the 1,829 "other" errors to identify recurring interval patterns.
+5. Preserve this benchmark run; do not overwrite its JSONL, TXT, summary, or manifest.
