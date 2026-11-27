@@ -906,3 +906,29 @@ Across all incorrect valid predictions, the most common error classes were:
 3. Determine whether failures are caused by expected-label/rendering mismatches, instrument spectra, candidate generation, or reranker behavior. Verify using actual WAVs before changing labels or adding special cases.
 4. Inspect the 1,829 "other" errors to identify recurring interval patterns.
 5. Preserve this benchmark run; do not overwrite its JSONL, TXT, summary, or manifest.
+
+
+# 13. v0.4.1 candidate-generation experiment (2026-11-27)
+
+Created a separate v0.4.1 runtime while preserving all v0.4.0 files and model.
+
+Files:
+- pitch_dsp_v041.py
+- pitch_runtime_v041.py
+- main_v041.py
+- benchmark_v041.py
+
+Implementation:
+- Keeps the existing 23-feature candidate matrix unchanged.
+- Keeps the v0.4.0 ExtraTrees model at models/pitch_reranker_v040.pkl; v0.4.1 does not retrain or overwrite it.
+- Adds up to 8 prominent local FFT spectral peaks as supplemental MIDI candidates.
+- Candidate extraction maps peaks to the nearest equal-tempered MIDI note only when within 0.50 semitones and above a relative/absolute magnitude threshold.
+- Does not force MIDI 127 into the candidate set. A G9 candidate is added only when a qualifying spectral peak exists.
+- YIN now abstains when no local CMND minimum passes YIN_THRESHOLD, instead of promoting an untrusted minimum to a pitch candidate.
+- benchmark_v041.py runs the same benchmark workflow with a separate v0.4.1 output directory.
+
+Important limitations:
+- The added spectral peaks may include harmonics/partials, not only fundamentals.
+- The reused model was trained with v0.4.0 DSP behavior. The 23 feature dimensions/order are unchanged, but the YIN abstention change can shift feature distributions.
+- No local audio benchmark or runtime execution was possible during repository authoring. Treat v0.4.1 as experimental until the full benchmark is run.
+- Preserve v0.4.0 files and all prior benchmark outputs.
