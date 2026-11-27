@@ -137,3 +137,27 @@ LOW_CONFは最有力候補で正誤を採点しつつ、LOW_CONF件数として�
 - LOW_CONFの相対Confidence scoreは較正済み確率ではありません。
 - CQT・Attack・Sustainの追加解析は入力によっては処理時間を増やします。Tier 0で高信頼の一致がある場合は追加処理を省略します。
 - 014・016など一部の楽器では、ラベルやレンダリングされた音高の確認が必要な可能性があります。疑わしいデータを自動的に除外せず、元WAVを別途検証してください。
+
+
+## v0.4.1 candidate-generation experiment
+
+v0.4.1 is an experimental DSP update that preserves the v0.4.0 ExtraTrees
+model and its 23-feature input schema.
+
+Changes:
+- Adds up to 8 prominent local FFT peaks as supplemental MIDI candidates.
+- Does not force MIDI 127 into the candidate set; G9 is added only when a
+  qualifying spectral peak is actually present.
+- YIN abstains when no local CMND minimum passes the configured threshold.
+- Reuses `models/pitch_reranker_v040.pkl`; no model retraining or overwrite.
+
+Run:
+```powershell
+python main_v041.py "test.wav"
+python benchmark_v041.py
+```
+
+This is an experimental branch of the pipeline. Compare its coverage and
+accuracy against the preserved v0.4.0 benchmark before treating it as an
+improvement. The spectral peak supplement can include harmonics, so the
+reranker still has to distinguish fundamentals from partials.
